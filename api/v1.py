@@ -12,11 +12,11 @@ router = APIRouter(
 
 @router.post("/", status_code=201)
 def create_route(route: Route):
-    print('test')
+    print("test")
     return route
 
 
-@router.post('/{route_id}/way_point/', status_code=201)
+@router.post("/{route_id}/way_point/", status_code=201)
 def add_way_point(route_id: UUID):
     # coordinates = request.get_json()  # {“lat”: 59.23425, “lon”: 18.23526}
     # assert 'lat' in coordinates
@@ -24,6 +24,6 @@ def add_way_point(route_id: UUID):
     return {}
 
 
-@router.get('/{route_id}/length/')
+@router.get("/{route_id}/length/")
 def calculate_length(route_id: UUID):
     return {}
