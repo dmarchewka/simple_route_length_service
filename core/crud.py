@@ -55,3 +55,21 @@ def calculate_paths_for_route(route_id: UUID):
                 stop=stop,
             )
         )
+
+
+def calculate_route_length_and_longest_paths(route_id: UUID):
+    route = get_routes_db().get(route_id)
+
+    if not route:
+        raise ValueError("Route does not exist!")
+    elif route.created == datetime.date.today():
+        raise RouteException("This route is still open!")
+    elif len(route.paths) == 0:
+        raise RouteException("You need to calculate paths first!")
+
+    paths_length_km = [path.length_km for path in route.paths]
+    route.length_km = sum(paths_length_km)
+    max_path_length_km = max(paths_length_km)
+    route.longest_paths = [
+        path for path in route.paths if path.length_km == max_path_length_km
+    ]

@@ -4,7 +4,12 @@ from decimal import Decimal
 import pytest
 from freezegun import freeze_time
 
-from core.crud import create_route, add_way_point_to_route, calculate_paths_for_route
+from core.crud import (
+    create_route,
+    add_way_point_to_route,
+    calculate_paths_for_route,
+    calculate_route_length_and_longest_paths,
+)
 from core.database import get_routes_db, reset_routes_db
 from core.excpetions import RouteException
 from core.models import Path, WayPoint
@@ -83,7 +88,9 @@ def test_add_way_point_to_route():
 
 def test_add_way_point_to_route__route_does_not_exist():
     with pytest.raises(ValueError):
-        add_way_point_to_route("e84fee1e-fd4f-40f6-85b5-52ff46cbbb6e", D("50.11"), D("20.13"))
+        add_way_point_to_route(
+            "e84fee1e-fd4f-40f6-85b5-52ff46cbbb6e", D("50.11"), D("20.13")
+        )
 
 
 @pytest.mark.parametrize(
@@ -181,3 +188,56 @@ def test_calculate_paths_for_route__not_enough_way_points():
     with pytest.raises(ValueError) as err:
         calculate_paths_for_route(uuid)
         assert err.value == "Not enough way points in this route!"
+
+
+def test_calculate_route_length_and_longest_paths():
+    uuid = "e84fee1e-fd4f-40f6-85b5-52ff46cbbb6e"
+    with freeze_time("2021-01-01 12:00:00"):
+        create_route(uuid)
+        for lat, lon in [
+            (D("50.11"), D("20.13")),
+            (D("11.11"), D("0.13")),
+            (D("50.11"), D("20.13")),
+            (D("44.11"), D("15.13")),
+            (D("44.11"), D("15.13")),
+        ]:
+            add_way_point_to_route(uuid, lat, lon)
+
+    calculate_paths_for_route(uuid)
+    calculate_route_length_and_longest_paths(uuid)
+    route = get_routes_db().get(uuid)
+
+    assert route.length_km == D("10162.816105094")
+    assert len(route.longest_paths) == 2
+
+    assert route.longest_paths[0].length_km == D('4697.898349346')
+    assert route.longest_paths[0].start == route.way_points[0]
+    assert route.longest_paths[0].stop == route.way_points[1]
+
+    assert route.longest_paths[1].length_km == D('4697.898349346')
+    assert route.longest_paths[1].start == route.way_points[1]
+    assert route.longest_paths[1].stop == route.way_points[2]
+
+
+def test_calculate_route_length_and_longest_paths__route_not_exist():
+    with pytest.raises(ValueError) as err:
+        calculate_route_length_and_longest_paths("e84fee1e-fd4f-40f6-85b5-52ff46cbbb6e")
+        assert err.value == "Route does not exist!"
+
+
+def test_calculate_route_length_and_longest_paths__route_open():
+    uuid = "e84fee1e-fd4f-40f6-85b5-52ff46cbbb6e"
+    create_route(uuid)
+    with pytest.raises(RouteException) as err:
+        calculate_route_length_and_longest_paths(uuid)
+        assert err.value == "This route is still open!"
+
+
+def test_calculate_route_length_and_longest_paths__path_not_calculated():
+    uuid = "e84fee1e-fd4f-40f6-85b5-52ff46cbbb6e"
+    with freeze_time("2021-01-01 12:00:00"):
+        create_route(uuid)
+
+    with pytest.raises(RouteException) as err:
+        calculate_route_length_and_longest_paths(uuid)
+        assert err.value == "You need to calculate paths first!"
