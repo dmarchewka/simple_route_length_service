@@ -1,6 +1,7 @@
 from decimal import Decimal
 from pydantic import BaseModel, Field
 from pydantic.types import UUID
+from typing import List
 
 
 class Route(BaseModel):
@@ -34,5 +35,60 @@ class Length(BaseModel):
         schema_extra = {
             "example": {
                 "km": "334.83",
+            }
+        }
+
+
+class LongestPath(BaseModel):
+    km: Decimal
+    start: WayPoint
+    stop: WayPoint
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "km": "0",
+                "start": {
+                    "lat": "59.23425",
+                    "lon": "18.23526",
+                },
+                "stop": {
+                    "lat": "59.23425",
+                    "lon": "18.23526",
+                },
+            }
+        }
+
+
+class LongestPaths(BaseModel):
+    longest_paths: List[LongestPath]
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "longest_paths": [
+                    {
+                        "km": "0",
+                        "start": {
+                            "lat": "59.23425",
+                            "lon": "18.23526",
+                        },
+                        "stop": {
+                            "lat": "59.23425",
+                            "lon": "18.23526",
+                        },
+                    },
+                    {
+                        "km": "0",
+                        "start": {
+                            "lat": "59.23425",
+                            "lon": "18.23526",
+                        },
+                        "stop": {
+                            "lat": "59.23425",
+                            "lon": "18.23526",
+                        },
+                    },
+                ],
             }
         }

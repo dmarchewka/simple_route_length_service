@@ -9,8 +9,8 @@ class Route:
         self.created = datetime.date.today()
         self.length_km = 0
         self.way_points = []
-        self.paths = []
-        self.longest_paths = []
+        self.paths = None
+        self.longest_paths = None
 
 
 class WayPoint:

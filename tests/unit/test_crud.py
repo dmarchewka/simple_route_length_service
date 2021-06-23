@@ -10,14 +10,9 @@ from core.crud import (
     calculate_paths_for_route,
     calculate_route_length_and_longest_paths,
 )
-from core.database import get_routes_db, reset_routes_db
+from core.database import get_routes_db
 from core.excpetions import RouteException
 from core.models import Path, WayPoint
-
-
-@pytest.fixture(autouse=True)
-def clear_routes_db():
-    reset_routes_db()
 
 
 @freeze_time("2021-01-01 12:00:00")
@@ -30,9 +25,7 @@ def test_create_route():
 
     assert route.route_id == "e84fee1e-fd4f-40f6-85b5-52ff46cbbb6e"
     assert route.created == today
-    assert route.length_km == 0
     assert route.way_points == []
-    assert route.paths == []
 
 
 def test_create_route__already_exists():
@@ -165,18 +158,6 @@ def test_calculate_paths_for_route__route_open():
         assert err.value == "This route is still open!"
 
 
-def test_calculate_paths_for_route__already_calculated():
-    uuid = "e84fee1e-fd4f-40f6-85b5-52ff46cbbb6e"
-    with freeze_time("2021-01-01 12:00:00"):
-        create_route(uuid)
-    routes_db = get_routes_db()
-    route = routes_db.get(uuid)
-    route.paths.append(Path(length_km=D("0"), start=None, stop=None))
-    with pytest.raises(RouteException) as err:
-        calculate_paths_for_route(uuid)
-        assert err.value == "Paths are already calculated!"
-
-
 def test_calculate_paths_for_route__not_enough_way_points():
     uuid = "e84fee1e-fd4f-40f6-85b5-52ff46cbbb6e"
     with freeze_time("2021-01-01 12:00:00"):
@@ -210,13 +191,17 @@ def test_calculate_route_length_and_longest_paths():
     assert route.length_km == D("10162.816105094")
     assert len(route.longest_paths) == 2
 
-    assert route.longest_paths[0].length_km == D('4697.898349346')
-    assert route.longest_paths[0].start == route.way_points[0]
-    assert route.longest_paths[0].stop == route.way_points[1]
+    assert route.longest_paths[0] == {
+        "km": Decimal("4697.898349346"),
+        "start": {"lat": Decimal("50.11"), "lon": Decimal("20.13")},
+        "stop": {"lat": Decimal("11.11"), "lon": Decimal("0.13")},
+    }
 
-    assert route.longest_paths[1].length_km == D('4697.898349346')
-    assert route.longest_paths[1].start == route.way_points[1]
-    assert route.longest_paths[1].stop == route.way_points[2]
+    assert route.longest_paths[1] == {
+        "km": Decimal("4697.898349346"),
+        "start": {"lat": Decimal("11.11"), "lon": Decimal("0.13")},
+        "stop": {"lat": Decimal("50.11"), "lon": Decimal("20.13")},
+    }
 
 
 def test_calculate_route_length_and_longest_paths__route_not_exist():

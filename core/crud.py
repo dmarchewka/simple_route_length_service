@@ -40,11 +40,14 @@ def calculate_paths_for_route(route_id: UUID):
         raise ValueError("Route does not exist!")
     elif route.created == datetime.date.today():
         raise RouteException("This route is still open!")
-    elif len(route.paths) > 0:
-        raise RouteException("Paths are already calculated!")
     elif len(route.way_points) < 2:
         raise ValueError("Not enough way points in this route!")
 
+    # Do not recalculate paths
+    if route.paths:
+        return
+
+    route.paths = []
     for i, start in enumerate(route.way_points[:-1]):
         stop = route.way_points[i + 1]
         length_km = calculate_length_km(start, stop)
@@ -64,12 +67,39 @@ def calculate_route_length_and_longest_paths(route_id: UUID):
         raise ValueError("Route does not exist!")
     elif route.created == datetime.date.today():
         raise RouteException("This route is still open!")
-    elif len(route.paths) == 0:
+    elif route.paths is None:
         raise RouteException("You need to calculate paths first!")
 
     paths_length_km = [path.length_km for path in route.paths]
     route.length_km = sum(paths_length_km)
     max_path_length_km = max(paths_length_km)
     route.longest_paths = [
-        path for path in route.paths if path.length_km == max_path_length_km
+        {
+            "km": path.length_km,
+            "start": {
+                "lat": path.start.lat,
+                "lon": path.start.lon,
+            },
+            "stop": {
+                "lat": path.stop.lat,
+                "lon": path.stop.lon,
+            },
+        }
+        for path in route.paths
+        if path.length_km == max_path_length_km
     ]
+
+
+def get_calculated_route_data(route_id: UUID):
+    route = get_routes_db().get(route_id)
+
+    if not route:
+        raise ValueError("Route does not exist!")
+
+    if route.paths is None:
+        calculate_paths_for_route(route_id=route_id)
+
+    if route.longest_paths is None:
+        calculate_route_length_and_longest_paths(route_id=route_id)
+
+    return route
